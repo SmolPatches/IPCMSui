@@ -14,6 +14,7 @@
     flake-utils,
     ...
   }: let
+    name = "IPCM";
     systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin"];
     systemOutputs = flake-utils.lib.eachSystem systems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
@@ -29,10 +30,11 @@
         name = "sui-dev-shell";
         packages = [
           devnet
+          pkgs.just
           pkgs.git
           pkgs.zsh
         ];
-        
+
         shellHook = ''
           # export SHELL=${pkgs.zsh}/bin/zsh
         '';
