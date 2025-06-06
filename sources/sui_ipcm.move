@@ -6,6 +6,7 @@
 // https://docs.sui.io/concepts/sui-move-concepts/conventions
 module sui_ipcm::ipcm;
 use std::string::{String};
+use std::ascii; 
 use sui::event;
 // === Errors ===
 
@@ -16,8 +17,8 @@ const EInvadlidPerm: vector<u8> = b"Invalid Permissions";
 
 /// CID type, made to logically signify an IPFS CID
 /// Note that SUI CID's are varied and enforcment of type validity should be done by RPC calling code off chain
-public struct CID has store, copy, drop{ 
-    cid: vector<u8>,
+public struct CID has store, copy, drop{
+    cid: ascii::String, 
     desc: Option<String>
 }
 
@@ -33,13 +34,13 @@ public struct IPCM has key, store {
 
 
 // === Public Functions ===
-public fun read(ipcm:&IPCM): CID { 
+public fun read(ipcm:&IPCM): CID {
     ipcm.cid
 }
-public fun makeCID(cid:vector<u8>,desc:Option<String>): CID {
+public fun makeCID(cid:ascii::String,desc:Option<String>): CID {
     CID {
-	cid,
-	desc
+        cid,
+        desc
     }
 }
 // === Private Functions ===
@@ -47,32 +48,33 @@ public fun makeCID(cid:vector<u8>,desc:Option<String>): CID {
 // === Events ===
 
 // Entry
-public entry fun mint(cid: vector<u8>,desc:Option<String>,ctx:&mut TxContext) {
+public entry fun testy() {}
+public entry fun mint(cid: ascii::String,desc:Option<String>,ctx:&mut TxContext) {
     let cid = makeCID(cid,desc);
     let id = object::new(ctx);
     let owner = tx_context::sender(ctx);
     transfer::transfer(
-	IPCM {
-	    id,
-	    cid,
-	    owner,
-	},
+        IPCM {
+            id,
+            cid,
+            owner,
+        },
         tx_context::sender(ctx)
     );
 }
-public struct UpdatedIPCM has copy, drop{
+public struct UpdatedIPCM has copy, drop {
     ipcm_id: ID
 }
-public entry fun update(ipcm:&mut IPCM,cid:vector<u8>,desc:Option<String>,update_desc: bool,ctx:&mut TxContext) {
+public entry fun update(ipcm:&mut IPCM,cid:ascii::String,desc:Option<String>,update_desc: bool,ctx:&mut TxContext) {
     let cid = makeCID(cid,desc);
     assert!(ipcm.owner == tx_context::sender(ctx),EInvadlidPerm);
-    if (update_desc) { 
-	ipcm.cid = cid;
-	return
+    if (update_desc) {
+        ipcm.cid = cid;
+        return
     };
     ipcm.cid.cid = cid.cid;
     event::emit(UpdatedIPCM {
-	ipcm_id: object::id(ipcm)
+        ipcm_id: object::id(ipcm)
     });
 }
 public entry fun read_ipcm(ipcm:&IPCM,_:&mut TxContext): CID {
