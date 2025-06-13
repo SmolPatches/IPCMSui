@@ -19,10 +19,10 @@ fn main() {
         ("".into(), "".into(), Gateway("127.0.0.1".into(), 9000));
     let help_msg = "how to use:\n--uid PATH\tread smart contract uid instead of parsing toml\nNOTE if both --source and --uid are passed, last occurence overwrites the UID\n --source PATH, --s PATH\tsource the UID from sc.toml path, and write lock to same place\n"; // really long help msg
     let mut set: bool = false;
-    let rules = cmd::Rules::parse_all(env_input);
+    let rules = cmd::Scanner::parse_all(env_input);
     // -------------------------------
     // flag parsing
-    for rule in rules.vec() {
+    for rule in rules {
         // rules should be iterator of rules
         // could get crazy with PQueues to pick which args to overwrite
         match rule {

@@ -1,5 +1,6 @@
-use log::info;
+use log::{error, info};
 use std::collections::VecDeque;
+use std::mem::take;
 use std::path::PathBuf;
 use std::str::FromStr;
 #[derive(Debug)]
@@ -82,12 +83,15 @@ fn tokenize(iter: impl Iterator<Item = Box<str>>) -> Tokens
     .collect::<Tokens>() // each space is a token if not raise error
 }
 // all the parsing stuff
-pub struct Rules<T = Tokens> {
+pub struct Scanner<T = Tokens> {
     tokens: T, // peekable iterator?
     rules: Vec<Rule>,
 }
-type ParseResult = Option<Rule>;
-impl Rules {
+type ParseResult = Result<Rule, &str>; // Rule or Flag Message
+/// At the scanner stage all tokens are collected
+/// This means the only "Error" could be if there is a missing field on a certain grammar or something of this sort
+/// Figure out how i want to report results to the user, for example a missing field or something isnt a path
+impl Scanner {
     // fn from(v: Vec<Rule>) -> Self {
     //     // function for testing
     //     Rules {
@@ -97,6 +101,7 @@ impl Rules {
     // }
     fn parse(&mut self) {
         // take this out and put this in a custom type so rules is the result only after parsing is done
+        // maybe make this actually recursive?
         println!("Orignal Token Vec: {:?}", self.tokens.tokens);
         while self.tokens.tokens.len() > 0 {
             info!(
@@ -104,60 +109,41 @@ impl Rules {
                 "Rules: {:?}, Tokens:{:?}\n----",
                 self.rules, self.tokens.tokens
             );
-            // match self.tokens.tokens[0] {
-            //     Token::UidFlag => self.parse_uid().map_or((), |rule| self.rules.push(rule)),
-            //     Token::SourceFlag => self
-            //         .parse_cmdpath()
-            //         .map_or((), |rule| self.rules.push(rule)),
-            //     Token::Help => self.parse_help().map_or((), |rule| self.rules.push(rule)),
-            //     _ => _ = self.tokens.tokens.pop_front(),
-            // };
-            if let Some(rule) = self.parse_cmdpath() {
-                self.rules.push(rule);
-                continue;
-            }
-            if let Some(rule) = self.parse_uid() {
-                self.rules.push(rule);
-                continue;
-            }
-            if let Some(rule) = self.parse_help() {
-                self.rules.push(rule);
-                continue;
-            }
-            if let Some(rule) = self.parse_qmode() {
-                self.rules.push(rule);
-                continue;
-            }
-            self.tokens.tokens.pop_front();
+            info!(target:"Rules Mainloop","cursor:{:?}",self.tokens.tokens[0]);
+            match self.tokens.tokens[0] {
+                Token::UidFlag => self.parse_uid().map_or((), |rule| self.rules.push(rule)),
+                Token::SourceFlag => self
+                    .parse_cmdpath()
+                    .map_or((), |rule| self.rules.push(rule)),
+                Token::Help => self.parse_help().map_or((), |rule| self.rules.push(rule)),
+                _ => _ = self.tokens.tokens.pop_front(),
+            };
+            // self.tokens.tokens.pop_front();
         }
         info!(target:"Rules Mainloop","Final Ruleset: {:?}",self.rules);
     }
 
-    // maybe make this actually recursive?
-    pub fn parse_all(stream: impl Iterator<Item = Box<str>>) -> Rules {
-        let mut r = Rules {
+    pub fn parse_all<'a>(stream: impl Iterator<Item = Box<str>>) -> Vec<Rule> {
+        let mut r = Scanner {
             tokens: tokenize(stream),
             rules: Vec::new(),
         };
         r.parse();
-        r
-    }
-    pub fn vec(self) -> Vec<Rule> {
-        // do something else here
-        self.rules
+        r.rules
     }
     fn parse_help(&mut self) -> ParseResult {
         let target = "ParseHelp";
-        if self.tokens.tokens.len() < 1 {
-            info!(target:target,"Len<1");
-            return None;
-        }
+        // // length check put here to make parsing easier for main loop
+        // if self.tokens.tokens.len() < 1 {
+        //     error!(target:target,"Len<1"); // not an "error"
+        // }
+        // no other way to extract the variant
         if let Some(Token::Help) = self.tokens.tokens.front() {
             info!(target:target,"Match");
             self.tokens.tokens.pop_front();
             return Some(Rule::Help);
         }
-        None
+        unreachable!("");
     }
     fn parse_qmode(&mut self) -> ParseResult {
         let target = "ParseQmode";
