@@ -1,6 +1,5 @@
-use log::{error, info};
+use log::info;
 use std::collections::VecDeque;
-use std::mem::take;
 use std::path::PathBuf;
 use std::str::FromStr;
 #[derive(Debug)]
@@ -85,9 +84,9 @@ fn tokenize(iter: impl Iterator<Item = Box<str>>) -> Tokens
 // all the parsing stuff
 pub struct Scanner<T = Tokens> {
     tokens: T, // peekable iterator?
-    rules: Vec<Rule>,
+    rules: Vec<ParseResult>,
 }
-type ParseResult = Result<Rule, &str>; // Rule or Flag Message
+type ParseResult = Result<Rule, Box<str>>; // Rule or Flag Message
 /// At the scanner stage all tokens are collected
 /// This means the only "Error" could be if there is a missing field on a certain grammar or something of this sort
 /// Figure out how i want to report results to the user, for example a missing field or something isnt a path
@@ -104,26 +103,43 @@ impl Scanner {
         // maybe make this actually recursive?
         println!("Orignal Token Vec: {:?}", self.tokens.tokens);
         while self.tokens.tokens.len() > 0 {
+            let mut push: bool = true;
             info!(
                 target:"Rules Mainloop",
                 "Rules: {:?}, Tokens:{:?}\n----",
                 self.rules, self.tokens.tokens
             );
             info!(target:"Rules Mainloop","cursor:{:?}",self.tokens.tokens[0]);
-            match self.tokens.tokens[0] {
-                Token::UidFlag => self.parse_uid().map_or((), |rule| self.rules.push(rule)),
-                Token::SourceFlag => self
-                    .parse_cmdpath()
-                    .map_or((), |rule| self.rules.push(rule)),
-                Token::Help => self.parse_help().map_or((), |rule| self.rules.push(rule)),
-                _ => _ = self.tokens.tokens.pop_front(),
+
+            let round = match self.tokens.tokens[0] {
+                Token::UidFlag => self.parse_uid(),
+                Token::SourceFlag => self.parse_cmdpath(),
+                Token::Help => self.parse_help(),
+                Token::Quiet => self.parse_qmode(),
+                _ => {
+                    self.tokens.tokens.pop_front();
+                    push = false;
+                    Err("popped".into()) // this is skipped
+                }
             };
+            if push {
+                // push the results
+                self.rules.push(round);
+            }
             // self.tokens.tokens.pop_front();
         }
         info!(target:"Rules Mainloop","Final Ruleset: {:?}",self.rules);
     }
 
-    pub fn parse_all<'a>(stream: impl Iterator<Item = Box<str>>) -> Vec<Rule> {
+    pub fn parse_strict(stream: impl Iterator<Item = Box<str>>) -> Vec<Rule> {
+        let mut r = Scanner {
+            tokens: tokenize(stream),
+            rules: Vec::new(),
+        };
+        r.parse();
+        r.rules.into_iter().filter_map(|r| r.ok()).collect()
+    }
+    pub fn parse_results(stream: impl Iterator<Item = Box<str>>) -> Vec<ParseResult> {
         let mut r = Scanner {
             tokens: tokenize(stream),
             rules: Vec::new(),
@@ -141,61 +157,67 @@ impl Scanner {
         if let Some(Token::Help) = self.tokens.tokens.front() {
             info!(target:target,"Match");
             self.tokens.tokens.pop_front();
-            return Some(Rule::Help);
+            return Ok(Rule::Help);
         }
-        unreachable!("");
+        unreachable!(""); // match is redirecting us here, so its impossible
     }
     fn parse_qmode(&mut self) -> ParseResult {
         let target = "ParseQmode";
-        if self.tokens.tokens.len() < 1 {
-            info!(target:target,"Len<1");
-            return None;
-        }
+        // if self.tokens.tokens.len() < 1 {
+        //     info!(target:target,"Len<1");
+        //     return None;
+        // }
         if let Some(Token::Quiet) = self.tokens.tokens.front() {
             info!(target:target,"Match");
             self.tokens.tokens.pop_front();
-            return Some(Rule::QuietMode);
+            return Ok(Rule::QuietMode);
         }
-        None
+        unreachable!(""); // match is redirecting us here, so its impossible
     }
     fn parse_cmdpath(&mut self) -> ParseResult {
         let target = "ParseCmdPath";
         info!(target:target,"Entry");
         if self.tokens.tokens.len() < 2 {
-            info!(target:target,"Len<2");
-            return None;
+            info!(target:target,"Len<2"); // parsing error but recoverable
+            return Err("Missing field, ex: --source ~/.config/pinsafe/".into());
         }
         let r = match (&self.tokens.tokens[0], &self.tokens.tokens[1]) {
             (Token::SourceFlag, Token::Path(p)) => {
                 info!(target:target,"Match");
-                Some(Rule::CfgPath(p.to_path_buf()))
+                Ok(Rule::CfgPath(p.to_path_buf()))
             }
-            (_, _) => None,
+            (Token::SourceFlag, _) => {
+                // i need to pop these
+                info!(target:target, "Failed: with args [{:?},{:?}]",self.tokens.tokens[0],self.tokens.tokens[1]);
+                Err("BAD ARGS for Source: missing field\nexample: --source ./path".into())
+            }
+            _ => Err("Is this possible?".into()),
         };
-        if r.is_some() {
-            self.tokens.tokens.pop_front();
-            self.tokens.tokens.pop_front();
-        }
+        self.tokens.tokens.pop_front();
+        self.tokens.tokens.pop_front();
         r
     }
     fn parse_uid(&mut self) -> ParseResult {
         let target = "ParseUid";
         info!(target:target,"Entry");
         if self.tokens.tokens.len() < 2 {
-            info!(target:target,"Len<2");
-            return None;
+            info!(target:target,"Len<2"); // parsing error but recoverable
+            return Err("Missing field, ex: --uid 0x14542642".into());
         }
         let r = match (&self.tokens.tokens[0], &self.tokens.tokens[1]) {
             (Token::UidFlag, Token::Path(p)) => {
                 info!(target:target,"Match");
-                Some(Rule::Uid(String::from(p.to_str().unwrap())))
+                Ok(Rule::Uid(String::from(p.to_str().unwrap())))
             }
-            (_, _) => None,
+            (Token::UidFlag, _) => {
+                // i need to pop these
+                info!(target:target, "Failed: with args [{:?},{:?}]",self.tokens.tokens[0],self.tokens.tokens[1]);
+                Err("BAD ARGS for Uid: missing field\nexample: --uid ./path".into())
+            }
+            _ => Err("Is this possible?".into()),
         };
-        if r.is_some() {
-            self.tokens.tokens.pop_front();
-            self.tokens.tokens.pop_front();
-        }
+        self.tokens.tokens.pop_front();
+        self.tokens.tokens.pop_front();
         r
     }
 }
