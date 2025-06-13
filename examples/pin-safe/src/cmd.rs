@@ -1,12 +1,14 @@
-use std::iter::Peekable;
-use std::path::{Path, PathBuf};
+use log::info;
+use std::collections::VecDeque;
+use std::path::PathBuf;
 use std::str::FromStr;
 #[derive(Debug)]
 pub enum Token {
     Path(PathBuf), // the token that should come after the sourcecmd
     SourceFlag,
     UidFlag,
-    Plain(String), // plain text for the objectid
+    Help,
+    Quiet,
     Skip,
 }
 #[derive(Debug)]
@@ -14,24 +16,28 @@ pub struct UID {} // temp
 /// RULES
 /// CfgPath: --source _UNIXPATH_
 /// Uid: --cid STRING
-/// EMPTY: * // maybe delete this or keep for whitespace
+//  Help: --help
 // how to deal with duplicates?
 #[derive(Debug)]
 pub enum Rule {
-    Empty,
     CfgPath(PathBuf), // config path to read toml and write lock
-    Uid(String),
+    Uid(String),      // replace this with UID
+    Help,
+    QuietMode,
 }
+type TokenContainer = VecDeque<Token>;
 pub struct Tokens {
-    tokens: Vec<Token>,
+    tokens: TokenContainer,
 }
 impl Tokens {
     fn new() -> Tokens {
-        Tokens { tokens: Vec::new() }
+        Tokens {
+            tokens: TokenContainer::new(),
+        }
     }
-    pub fn from(stream: impl Iterator<Item = Box<str>>) -> Self {
-        tokenize(stream)
-    }
+    // pub fn from(stream: impl Iterator<Item = Box<str>>) -> Self {
+    //     tokenize(stream)
+    // }
 }
 impl FromIterator<Token> for Tokens {
     fn from_iter<T>(iter: T) -> Self
@@ -39,14 +45,14 @@ impl FromIterator<Token> for Tokens {
         T: IntoIterator<Item = Token>,
     {
         Tokens {
-            tokens: Vec::from_iter(iter),
+            tokens: TokenContainer::from_iter(iter),
         }
     }
 }
 impl Iterator for Tokens {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
-        self.tokens.pop()
+        self.tokens.pop_back()
     }
 }
 
@@ -59,6 +65,8 @@ fn tokenize(iter: impl Iterator<Item = Box<str>>) -> Tokens
         match item.as_ref() {
             "--source" | "-s" => Token::SourceFlag,
             "--uid" | "-u" => Token::UidFlag,
+            "--help" | "-h" => Token::Help,
+            "--quiet" => Token::Quiet,
             x => {
                 if let Ok(path) = PathBuf::from_str(x) {
                     // test if linux path
@@ -78,40 +86,54 @@ pub struct Rules<T = Tokens> {
     tokens: T, // peekable iterator?
     rules: Vec<Rule>,
 }
-type RE = String;
-type ParseResult = Result<Rule, RE>;
+type ParseResult = Option<Rule>;
 impl Rules {
-    fn from(v: Vec<Rule>) -> Self {
-        // function for testing
-        Rules {
-            tokens: Tokens::new(), // empty means done
-            rules: v,
-        }
-    }
+    // fn from(v: Vec<Rule>) -> Self {
+    //     // function for testing
+    //     Rules {
+    //         tokens: Tokens::new(), // empty means done
+    //         rules: v,
+    //     }
+    // }
     fn parse(&mut self) {
         // take this out and put this in a custom type so rules is the result only after parsing is done
-        self.tokens.tokens.reverse();
-        if self.tokens.tokens.len() == 0 {
-            // quit
-            unimplemented!("exit because parsed")
-        }
+        println!("Orignal Token Vec: {:?}", self.tokens.tokens);
         while self.tokens.tokens.len() > 0 {
-            if let Ok(rule) = self.parse_cmdpath() {
-                println!("Pushed {:?}", rule);
+            info!(
+                target:"Rules Mainloop",
+                "Rules: {:?}, Tokens:{:?}\n----",
+                self.rules, self.tokens.tokens
+            );
+            // match self.tokens.tokens[0] {
+            //     Token::UidFlag => self.parse_uid().map_or((), |rule| self.rules.push(rule)),
+            //     Token::SourceFlag => self
+            //         .parse_cmdpath()
+            //         .map_or((), |rule| self.rules.push(rule)),
+            //     Token::Help => self.parse_help().map_or((), |rule| self.rules.push(rule)),
+            //     _ => _ = self.tokens.tokens.pop_front(),
+            // };
+            if let Some(rule) = self.parse_cmdpath() {
                 self.rules.push(rule);
-                self.tokens.tokens.pop();
-                self.tokens.tokens.pop();
                 continue;
             }
-            if let Ok(rule) = self.parse_uid() {
+            if let Some(rule) = self.parse_uid() {
                 self.rules.push(rule);
-                self.tokens.tokens.pop();
-                self.tokens.tokens.pop();
                 continue;
             }
-            self.tokens.tokens.pop();
+            if let Some(rule) = self.parse_help() {
+                self.rules.push(rule);
+                continue;
+            }
+            if let Some(rule) = self.parse_qmode() {
+                self.rules.push(rule);
+                continue;
+            }
+            self.tokens.tokens.pop_front();
         }
+        info!(target:"Rules Mainloop","Final Ruleset: {:?}",self.rules);
     }
+
+    // maybe make this actually recursive?
     pub fn parse_all(stream: impl Iterator<Item = Box<str>>) -> Rules {
         let mut r = Rules {
             tokens: tokenize(stream),
@@ -124,22 +146,70 @@ impl Rules {
         // do something else here
         self.rules
     }
+    fn parse_help(&mut self) -> ParseResult {
+        let target = "ParseHelp";
+        if self.tokens.tokens.len() < 1 {
+            info!(target:target,"Len<1");
+            return None;
+        }
+        if let Some(Token::Help) = self.tokens.tokens.front() {
+            info!(target:target,"Match");
+            self.tokens.tokens.pop_front();
+            return Some(Rule::Help);
+        }
+        None
+    }
+    fn parse_qmode(&mut self) -> ParseResult {
+        let target = "ParseQmode";
+        if self.tokens.tokens.len() < 1 {
+            info!(target:target,"Len<1");
+            return None;
+        }
+        if let Some(Token::Quiet) = self.tokens.tokens.front() {
+            info!(target:target,"Match");
+            self.tokens.tokens.pop_front();
+            return Some(Rule::QuietMode);
+        }
+        None
+    }
     fn parse_cmdpath(&mut self) -> ParseResult {
+        let target = "ParseCmdPath";
+        info!(target:target,"Entry");
         if self.tokens.tokens.len() < 2 {
-            return Err("Sadxness".to_uppercase());
+            info!(target:target,"Len<2");
+            return None;
         }
-        match (&self.tokens.tokens[1], &self.tokens.tokens[0]) {
-            (Token::SourceFlag, Token::Path(p)) => Ok(Rule::CfgPath(p.to_path_buf())),
-            (_, _) => Err("Sadness".to_string()),
+        let r = match (&self.tokens.tokens[0], &self.tokens.tokens[1]) {
+            (Token::SourceFlag, Token::Path(p)) => {
+                info!(target:target,"Match");
+                Some(Rule::CfgPath(p.to_path_buf()))
+            }
+            (_, _) => None,
+        };
+        if r.is_some() {
+            self.tokens.tokens.pop_front();
+            self.tokens.tokens.pop_front();
         }
+        r
     }
     fn parse_uid(&mut self) -> ParseResult {
+        let target = "ParseUid";
+        info!(target:target,"Entry");
         if self.tokens.tokens.len() < 2 {
-            return Err("Sadxness".to_uppercase());
+            info!(target:target,"Len<2");
+            return None;
         }
-        match (&self.tokens.tokens[1], &self.tokens.tokens[0]) {
-            (Token::UidFlag, Token::Path(p)) => Ok(Rule::Uid(String::from(p.to_str().unwrap()))),
-            (_, _) => Err("Sadness".to_string()),
+        let r = match (&self.tokens.tokens[0], &self.tokens.tokens[1]) {
+            (Token::UidFlag, Token::Path(p)) => {
+                info!(target:target,"Match");
+                Some(Rule::Uid(String::from(p.to_str().unwrap())))
+            }
+            (_, _) => None,
+        };
+        if r.is_some() {
+            self.tokens.tokens.pop_front();
+            self.tokens.tokens.pop_front();
         }
+        r
     }
 }
