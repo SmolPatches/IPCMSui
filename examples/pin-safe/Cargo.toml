@@ -1,0 +1,11 @@
+[package]
+name = "pin-safe"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+curl = { version = "0.4.48", default-features = false }
+sui_sdk = { git = "https://github.com/mystenlabs/sui", package = "sui-sdk"}
+tokio = { version = "1.2", features = ["full"] }
+anyhow = "1.0"
+toml = "0.8.23"
