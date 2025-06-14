@@ -46,7 +46,9 @@ public fun makeCID(cid:ascii::String,desc:Option<String>): CID {
 // === Private Functions ===
 
 // === Events ===
-
+public struct UpdatedIPCM has copy, drop {
+    ipcm_id: ID
+}
 // Entry
 public entry fun testy() {}
 public entry fun mint(cid: ascii::String,desc:Option<String>,ctx:&mut TxContext) {
@@ -61,9 +63,6 @@ public entry fun mint(cid: ascii::String,desc:Option<String>,ctx:&mut TxContext)
         },
         tx_context::sender(ctx)
     );
-}
-public struct UpdatedIPCM has copy, drop {
-    ipcm_id: ID
 }
 public entry fun update(ipcm:&mut IPCM,cid:ascii::String,desc:Option<String>,update_desc: bool,ctx:&mut TxContext) {
     let cid = makeCID(cid,desc);

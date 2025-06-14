@@ -22,19 +22,17 @@
         # new package for sui 1.49.0
         type = "testnet"; # testnet devnet mainnet
         version_number = "1.49.1";
-        vhash = "sha256-ZTr0+0KLYrCQtt1OZSPiSwHRLO0Ukbel5SUzZFOKti8=";
+        vhash = "sha256-ZTr0+0KLYrCQtt1OZSPiSwHRLO0Ukbel5SUzZFOKti8="; # this only builds on mac since hash is different on each build
       };
     in {
       packages.install = devnet; # package to install this devnet version outside of flake
       devShells.default = pkgs.mkShell {
         name = "sui-dev-shell";
-        packages = [
-          devnet
-          pkgs.just
-          pkgs.git
-          pkgs.zsh
-        ];
-
+        packages =
+          (with pkgs; [just jq tomlq git zsh])
+          ++ [
+            devnet
+          ];
         shellHook = ''
           # export SHELL=${pkgs.zsh}/bin/zsh
         '';
