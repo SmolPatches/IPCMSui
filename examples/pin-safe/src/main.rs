@@ -1,7 +1,6 @@
 mod cmd;
 use std::env;
 use sui_sdk::SuiClientBuilder;
-// use curl::easy::Easy;
 fn main() {
     // parse args
     // check config from flags or toml file
@@ -10,16 +9,13 @@ fn main() {
 
     // after CID is confermed, subscribe for updates
     // if updates change alert me before reseting the cached IPFS cid pinned with the new one
-    // use lexer/parser for cmd flags instead of janky things
-    // Robert Sebesta, Concepts of Programming Languages, 12th Edition
-    // specify rules and get args
     env_logger::init();
     let env_input = env::args().map(|arg| arg.into());
     let (cidCached, mut ipcmID, gateway): (String, String, Gateway) =
         ("".into(), "".into(), Gateway("127.0.0.1".into(), 9000));
     let help_msg = "how to use:\n--uid PATH\tread smart contract uid instead of parsing toml\nNOTE if both --source and --uid are passed, last occurence overwrites the UID\n --source PATH, --s PATH\tsource the UID from sc.toml path, and write lock to same place\n"; // really long help msg
     let mut set: bool = false;
-    let rules = cmd::Scanner::parse_results(env_input);
+    let rules = cmd::FSM::new(env_input).parse();
     // -------------------------------
     // flag parsing
     for rule in rules {
