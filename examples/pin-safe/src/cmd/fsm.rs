@@ -31,10 +31,8 @@ impl FSM {
                     };
                     self.state = match head {
                         Token::UidFlag => State::Uid,
-                        Token::SourceFlag => {
-                            info!(target:target,"send2cfg");
-                            State::Cfg
-                        }
+                        Token::SourceFlag => State::Cfg,
+                        Token::Log => State::Log,
                         Token::Help => State::Help,
                         _ => State::Skip, //
                     };
@@ -54,6 +52,21 @@ impl FSM {
                     } else {
                         info!(target:target,"buffer != path | {:?}",self.buffer[0]);
                         self.rules.push(Err("Missing configuration value".into()));
+                        self.state = State::Done; // if there is an error quit the rest
+                    }
+                }
+                State::Log => {
+                    // return here until we collect enough values
+                    if self.buffer.len() < 1 {
+                        self.tokens.pop_front().map(|token| self.buffer.push(token));
+                    }
+                    if let Some(Token::Path(path)) = self.buffer.get(0) {
+                        self.rules.push(Ok(Rule::LogPath(path.into())));
+                        self.state = State::Cleanup;
+                    } else {
+                        self.rules.push(Err(
+                            "Malformed input processing --log\nEx:--log ./path/log.txt".into(),
+                        ));
                         self.state = State::Done; // if there is an error quit the rest
                     }
                 }
@@ -84,9 +97,13 @@ impl FSM {
                         Some(token) => {
                             info!(target:target,"{cnt}: tok={:?}",token);
                             self.state = match token {
+                                // root flags/cmds get sent to new path
+                                // non-roots get set to skip to find right state
+                                // i think a root is like a terminal or the first part of a grammar in real lexer words
                                 Token::UidFlag => State::Uid,
                                 Token::SourceFlag => State::Cfg,
                                 Token::Help => State::Help,
+                                Token::Log => State::Log,
                                 _ => {
                                     self.tokens.pop_front(); // pop this value
                                     State::Skip

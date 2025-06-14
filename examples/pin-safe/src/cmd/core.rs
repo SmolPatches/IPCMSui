@@ -8,7 +8,7 @@ pub enum Token {
     SourceFlag,
     UidFlag,
     Help,
-    Quiet,
+    Log,
     Skip,
 }
 #[derive(Debug)]
@@ -23,7 +23,7 @@ pub enum Rule {
     CfgPath(PathBuf), // config path to read toml and write lock
     Uid(String),      // replace this with UID
     Help,
-    QuietMode,
+    LogPath(PathBuf),
 }
 #[derive(Debug)]
 pub enum State {
@@ -31,6 +31,7 @@ pub enum State {
     Reset,
     Cfg,
     Uid,
+    Log,
     Help,
     Skip,
     Cleanup,
@@ -50,7 +51,7 @@ pub fn tokenize(iter: impl Iterator<Item = Box<str>>) -> Tokens
             "--source" | "-s" => Token::SourceFlag,
             "--uid" | "-u" => Token::UidFlag,
             "--help" | "-h" => Token::Help,
-            "--quiet" => Token::Quiet,
+            "--log" => Token::Log,
             x => {
                 if let Ok(path) = PathBuf::from_str(x) {
                     // test if linux path

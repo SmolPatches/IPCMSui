@@ -5275,13 +5275,13 @@ name = "pin-safe"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "cid",
  "curl",
  "env_logger",
  "log",
  "serde",
  "sui-sdk",
- "sui-sdk-types 0.0.5",
  "tokio",
  "toml 0.8.23",
 ]
@@ -7166,7 +7166,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "signature 2.2.0",
- "sui-sdk-types 0.0.4",
+ "sui-sdk-types",
 ]
 
 [[package]]
@@ -7408,7 +7408,7 @@ dependencies = [
  "serde_with",
  "sui-crypto",
  "sui-protocol-config",
- "sui-sdk-types 0.0.4",
+ "sui-sdk-types",
  "sui-types",
  "tap",
  "thiserror 1.0.69",
@@ -7473,20 +7473,6 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_with",
- "winnow",
-]
-
-[[package]]
-name = "sui-sdk-types"
-version = "0.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de7fb22164935584730c622f8da443dc8e88d8758cae26d720a5c86d037f8970"
-dependencies = [
- "base64ct",
- "bnum",
- "bs58 0.5.1",
- "hex",
- "roaring",
  "winnow",
 ]
 
@@ -7595,7 +7581,7 @@ dependencies = [
  "sui-enum-compat-util",
  "sui-macros",
  "sui-protocol-config",
- "sui-sdk-types 0.0.4",
+ "sui-sdk-types",
  "tap",
  "thiserror 1.0.69",
  "tonic",

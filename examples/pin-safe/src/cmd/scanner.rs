@@ -32,7 +32,7 @@ impl Scanner {
                 Token::UidFlag => self.parse_uid(),
                 Token::SourceFlag => self.parse_cmdpath(),
                 Token::Help => self.parse_help(),
-                Token::Quiet => self.parse_qmode(),
+                Token::Log => self.parse_logpath(),
                 _ => {
                     self.tokens.pop_front();
                     push = false;
@@ -77,16 +77,19 @@ impl Scanner {
         }
         unreachable!(""); // match is redirecting us here, so its impossible
     }
-    fn parse_qmode(&mut self) -> ParseResult {
+    fn parse_logpath(&mut self) -> ParseResult {
+        unimplemented!("update");
         let target = "ParseQmode";
         // if self.tokens.tokens.len() < 1 {
         //     info!(target:target,"Len<1");
         //     return None;
         // }
-        if let Some(Token::Quiet) = self.tokens.front() {
+        if let Some(Token::Log) = self.tokens.front() {
             info!(target:target,"Match");
             self.tokens.pop_front();
-            return Ok(Rule::QuietMode);
+            return Ok(Rule::LogPath(unimplemented!(
+                "I need to put a path here, like cmdpath/uid parsing"
+            )));
         }
         unreachable!(""); // match is redirecting us here, so its impossible
     }
