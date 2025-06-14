@@ -1296,6 +1296,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cid"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3147d8272e8fa0ccd29ce51194dd98f79ddfb8191ba9e3409884e751798acf3a"
+dependencies = [
+ "core2",
+ "multibase",
+ "multihash 0.19.3",
+ "unsigned-varint 0.8.0",
+]
+
+[[package]]
 name = "cipher"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4479,11 +4491,11 @@ dependencies = [
  "data-encoding",
  "log",
  "multibase",
- "multihash",
+ "multihash 0.17.0",
  "percent-encoding",
  "serde",
  "static_assertions",
- "unsigned-varint",
+ "unsigned-varint 0.7.2",
  "url",
 ]
 
@@ -4506,7 +4518,17 @@ checksum = "835d6ff01d610179fbce3de1694d007e500bf33a7f29689838941d6bf783ae40"
 dependencies = [
  "core2",
  "multihash-derive",
- "unsigned-varint",
+ "unsigned-varint 0.7.2",
+]
+
+[[package]]
+name = "multihash"
+version = "0.19.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b430e7953c29dd6a09afc29ff0bb69c6e306329ee6794700aee27b76a1aea8d"
+dependencies = [
+ "core2",
+ "unsigned-varint 0.8.0",
 ]
 
 [[package]]
@@ -5253,10 +5275,13 @@ name = "pin-safe"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cid",
  "curl",
  "env_logger",
  "log",
+ "serde",
  "sui-sdk",
+ "sui-sdk-types 0.0.5",
  "tokio",
  "toml 0.8.23",
 ]
@@ -7141,7 +7166,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "signature 2.2.0",
- "sui-sdk-types",
+ "sui-sdk-types 0.0.4",
 ]
 
 [[package]]
@@ -7383,7 +7408,7 @@ dependencies = [
  "serde_with",
  "sui-crypto",
  "sui-protocol-config",
- "sui-sdk-types",
+ "sui-sdk-types 0.0.4",
  "sui-types",
  "tap",
  "thiserror 1.0.69",
@@ -7448,6 +7473,20 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_with",
+ "winnow",
+]
+
+[[package]]
+name = "sui-sdk-types"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de7fb22164935584730c622f8da443dc8e88d8758cae26d720a5c86d037f8970"
+dependencies = [
+ "base64ct",
+ "bnum",
+ "bs58 0.5.1",
+ "hex",
+ "roaring",
  "winnow",
 ]
 
@@ -7556,7 +7595,7 @@ dependencies = [
  "sui-enum-compat-util",
  "sui-macros",
  "sui-protocol-config",
- "sui-sdk-types",
+ "sui-sdk-types 0.0.4",
  "tap",
  "thiserror 1.0.69",
  "tonic",
@@ -8496,6 +8535,12 @@ name = "unsigned-varint"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6889a77d49f1f013504cec6bf97a2c730394adedaeb1deb5ea08949a50541105"
+
+[[package]]
+name = "unsigned-varint"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb066959b24b5196ae73cb057f45598450d2c5f71460e98c49b738086eff9c06"
 
 [[package]]
 name = "untrusted"

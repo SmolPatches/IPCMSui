@@ -8,6 +8,9 @@ curl = { version = "0.4.48", default-features = false }
 sui_sdk = { git = "https://github.com/mystenlabs/sui", package = "sui-sdk"}
 tokio = { version = "1.2", features = ["full"] }
 anyhow = "1.0"
-toml = "0.8.23"
+toml = {version="0.8.23",features=["parse"]}
 log = { version = "0.4.27", features = ["kv"] }
 env_logger = "0.11.8"
+serde = { version = "1.0.219", default-features = false, features = ["derive"] }
+sui-sdk-types = { version = "0.0.5", default-features = false }
+cid = "0.11.1"

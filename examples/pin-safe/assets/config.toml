@@ -1,0 +1,7 @@
+[smart-contract]
+uid = "0xd5215ac85ea7496d892b94cf6c0f3241e1f8f00ac63feb6ac6cf68e026c29a3a"
+
+
+[sui_node]
+ip = "127.0.0.1"
+port = 9000
